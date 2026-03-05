@@ -1,0 +1,18 @@
+#!/bin/bash
+
+ssh cluster <<'EOF'
+
+cd /cluster-home/heczko_1196883/prir03 || exit 1
+
+echo "== Kompilacja projektu =="
+
+c++ -O3 -fopenmp *cpp -o ./target/a.out
+
+echo "== Uruchamianie skryptu =="
+
+sbatch skrypt
+
+echo "== Zakończono, wychodzę z serwera =="
+
+exit
+EOF

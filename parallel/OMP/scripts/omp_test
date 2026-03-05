@@ -1,0 +1,89 @@
+#!/bin/bash
+
+DIR="$HOME/Documents/prir_cluster_omp/outputs_test"
+
+# Sprawdź, czy katalog istnieje
+if [ ! -d "$DIR" ]; then
+  echo "❌ Katalog $DIR nie istnieje!"
+  exit 1
+fi
+
+cd "$DIR" || exit 1
+
+# Sprawdź, czy są pliki
+FILES=(*)
+if [ ${#FILES[@]} -eq 0 ]; then
+  echo "❌ Brak plików w katalogu."
+  exit 1
+fi
+
+# Oblicz sumy kontrolne (sha256)
+declare -A CHECKSUMS
+for f in *; do
+  if [[ $f == "czas.out" || $f == "czas_seq.out" ]]; then
+    continue
+  fi
+
+  if [ -f "$f" ]; then
+    CHECKSUMS["$f"]=$(sha256sum "$f" | awk '{print $1}')
+  fi
+done
+
+# Pobierz unikalne sumy
+UNIQUE_HASHES=($(printf "%s\n" "${CHECKSUMS[@]}" | sort -u))
+
+if [ ${#UNIQUE_HASHES[@]} -eq 1 ]; then
+  echo "✅ Wszystkie pliki w $DIR są identyczne."
+else
+  echo "⚠️ Pliki różnią się! Znaleziono ${#UNIQUE_HASHES[@]} unikalnych wersji."
+  echo "Szczegóły:"
+  for f in "${!CHECKSUMS[@]}"; do
+    echo "${CHECKSUMS[$f]}  $f"
+  done | sort -k1
+
+  echo
+  echo "📄 Dodatkowe porównanie slurm.MIN_ID.out vs slurm.(MIN_ID+1).out:"
+  echo
+
+  shopt -s nullglob
+  SLURM_FILES=(slurm.*.out)
+  if [ ${#SLURM_FILES[@]} -eq 0 ]; then
+    echo "❌ Brak plików slurm.ID.out w $DIR – nie ma czego porównywać ID↔ID+1."
+    exit 1
+  fi
+
+  IDS=()
+  for f in "${SLURM_FILES[@]}"; do
+    if [[ "$f" =~ ^slurm\.([0-9]+)\.out$ ]]; then
+      IDS+=("${BASH_REMATCH[1]}")
+    fi
+  done
+
+  if [ ${#IDS[@]} -eq 0 ]; then
+    echo "❌ Nie znaleziono poprawnych nazw typu slurm.ID.out"
+    exit 1
+  fi
+
+  IFS=$'\n' SORTED_IDS=($(printf "%s\n" "${IDS[@]}" | sort -n))
+  unset IFS
+  MIN_ID=${SORTED_IDS[0]}
+  NEXT_ID=$((MIN_ID + 1))
+
+  REF_FILE="slurm.${MIN_ID}.out"
+  CMP_FILE="slurm.${NEXT_ID}.out"
+
+  if [ ! -f "$CMP_FILE" ]; then
+    echo "⚠️ Plik z ID+1 nie istnieje: $REF_FILE  vs  $CMP_FILE"
+    exit 0
+  fi
+
+  echo "Porównuję:"
+  echo "  REF: $REF_FILE (ID=$MIN_ID)"
+  echo "  CMP: $CMP_FILE (ID=$NEXT_ID)"
+  echo
+
+  diff --new-line-format='PLIK2 line %dn: %L' \
+     --old-line-format='PLIK1 line %dn: %L' \
+     --unchanged-line-format='' \
+     "$REF_FILE" "$CMP_FILE" || true
+fi

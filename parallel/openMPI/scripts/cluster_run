@@ -1,0 +1,18 @@
+#!/bin/bash
+
+ssh cluster <<'EOF'
+
+cd /cluster-home/heczko_1196883/prir || exit 1
+
+echo "== Kompilacja projektu =="
+
+mpiCC -O *cpp -o ./target/a.out
+
+echo "== Uruchamianie skryptu =="
+
+sbatch skrypt
+
+echo "== Zakończono, wychodzę z serwera =="
+
+exit
+EOF

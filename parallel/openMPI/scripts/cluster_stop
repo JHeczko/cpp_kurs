@@ -1,0 +1,16 @@
+#!/bin/bash
+
+ssh cluster <<'EOF'
+
+echo "======== USUWANIE Z KOLEJKI MOICH PROCESOW ========"
+
+scancel -u heczko_1196883
+
+echo "======== INFO O STANIE KLUSTRA ========"
+
+squeue
+ 
+echo "== Zakończono, wychodzę z serwera =="
+
+exit
+EOF

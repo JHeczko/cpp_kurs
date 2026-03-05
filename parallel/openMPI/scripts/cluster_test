@@ -1,0 +1,43 @@
+#!/bin/bash
+
+DIR="$HOME/Documents/prir_cluster_mpi/outputs_test"
+
+# Sprawdź, czy katalog istnieje
+if [ ! -d "$DIR" ]; then
+  echo "❌ Katalog $DIR nie istnieje!"
+  exit 1
+fi
+
+cd "$DIR" || exit 1
+
+# Sprawdź, czy są pliki
+FILES=(*)
+if [ ${#FILES[@]} -eq 0 ]; then
+  echo "❌ Brak plików w katalogu."
+  exit 1
+fi
+
+# Oblicz sumy kontrolne (sha256)
+declare -A CHECKSUMS
+for f in *; do
+  if [[ $f == "czas.out" || $f == "czas_seq.out" ]]; then
+    continue
+  fi
+  
+  if [ -f "$f" ]; then
+    CHECKSUMS["$f"]=$(sha256sum "$f" | awk '{print $1}')
+  fi
+done
+
+# Pobierz unikalne sumy
+UNIQUE_HASHES=($(printf "%s\n" "${CHECKSUMS[@]}" | sort -u))
+
+if [ ${#UNIQUE_HASHES[@]} -eq 1 ]; then
+  echo "✅ Wszystkie pliki w $DIR są identyczne."
+else
+  echo "⚠️ Pliki różnią się! Znaleziono ${#UNIQUE_HASHES[@]} unikalnych wersji."
+  echo "Szczegóły:"
+  for f in "${!CHECKSUMS[@]}"; do
+    echo "${CHECKSUMS[$f]}  $f"
+  done | sort -k1
+fi

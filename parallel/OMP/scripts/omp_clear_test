@@ -1,0 +1,3 @@
+#!/bin/bash
+
+rm -f $HOME/Documents/prir_cluster_omp/outputs_test/*.out $HOME/Documents/prir_cluster_omp/outputs_test/*.err

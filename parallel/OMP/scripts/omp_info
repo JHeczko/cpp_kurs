@@ -1,0 +1,16 @@
+#!/bin/bash
+
+ssh cluster <<'EOF'
+
+echo "======== INFO O STANIE KLUSTRA ========"
+ 
+sinfo -l
+
+echo "======== INFO O KOLEJCE ========"
+
+squeue
+
+echo "== Zakończono, wychodzę z serwera =="
+
+exit
+EOF

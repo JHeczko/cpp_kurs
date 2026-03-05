@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Sprawdzenie, czy podano argument
+if [ -z "$1" ]; then
+  echo "Użycie: $0 <liczba_uruchomień>"
+  exit 1
+fi
+
+RUNS=$1
+
+clear_test
+
+ssh cluster <<EOF
+
+cd /cluster-home/heczko_1196883/prir || exit 1
+
+
+echo "== Kompilacja wersji równoległej =="
+
+mpiCC -O Grid3D.cpp Net.cpp ParallelSimulation.cpp Physics.cpp Simulation.cpp ./target/Main_par.cpp -o ./target/a_parallel.out
+
+echo "== Kompilacja wersji sekwencyjnej =="
+
+g++ -O Grid3D.cpp Net.cpp SequentialSimulation.cpp Physics.cpp Simulation.cpp ./target/Main_seq.cpp -o ./target/a_sequential.out
+
+
+echo "== Uruchamianie skryptu $RUNS razy =="
+
+echo "== Uruchomienie sekwencyjnego =="
+sbatch ./target/skrypt_seq
+
+for i in \$(seq 1 $RUNS); do
+    echo "== Uruchomienie nr \$i =="
+    sbatch ./target/skrypt_par
+done
+
+echo "== Zakończono wszystkie uruchomienia =="
+
+exit
+EOF
